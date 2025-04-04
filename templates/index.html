@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask SocketIO Camera</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Camera Feed</h1>
+    <video id="video" width="320" height="240" autoplay></video>
+    <button id="start" onclick="startCamera()">Start Camera</button>
+
+    <script>
+        const socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        // Initialize the camera when the "Start Camera" button is clicked
+        function startCamera() {
+            const video = document.getElementById('video');
+
+            // Request access to the camera
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then((stream) => {
+                    // Set the video stream as the source of the video element
+                    video.srcObject = stream;
+
+                    // Now we can send the video data to the server (every frame or in chunks)
+                    sendVideoFeed(stream);
+                })
+                .catch((err) => {
+                    console.log('Error accessing the camera: ', err);
+                });
+        }
+
+        // Send video feed data (you can use WebRTC or other methods to send frames)
+        function sendVideoFeed(stream) {
+            // Create a canvas to capture video frames
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const video = document.getElementById('video');
+
+            setInterval(() => {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Send the image data to the server using SocketIO
+                const imageData = canvas.toDataURL('image/png');
+                socket.emit('video_feed', { image: imageData });
+            }, 100);  // Send every 100ms (10 FPS)
+        }
+
+        // Handle server response
+        socket.on('response', function(data) {
+            console.log(data.message);
+        });
+    </script>
+</body>
+</html>
