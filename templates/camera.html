@@ -7,9 +7,13 @@
     <button onclick="stopCamera()" class="btn btn-danger">Stop Camera</button>
     <button onclick="switchCamera()" class="btn btn-secondary">Switch Camera</button>
 </div>
-<div class="card p-3">
+<div class="card p-3 mb-3">
     <h5>Detected Weeds:</h5>
     <ul id="weedList"></ul>
+</div>
+<div class="card p-3">
+    <h5>Annotated Frame:</h5>
+    <img id="annotatedFrame" class="img-fluid" alt="Annotated Frame" src=""/>
 </div>
 <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
 <script>
@@ -35,8 +39,10 @@
                     ctx.drawImage(bitmap, 0, 0);
                     const base64 = canvas.toDataURL('image/jpeg');
                     socket.emit('video_feed', { frame: base64 });
+                }).catch(err => {
+                    console.error('Error grabbing frame:', err);
                 });
-            }, 1500);
+            }, 1500); // Adjust interval as needed
         }).catch(err => {
             console.error("Camera error:", err);
         });
@@ -69,6 +75,11 @@
             const li = document.createElement('li');
             li.innerText = "No weeds detected.";
             weedList.appendChild(li);
+        }
+        // Update the annotated frame image
+        if (data.annotated) {
+            const annotatedImg = document.getElementById("annotatedFrame");
+            annotatedImg.src = "data:image/jpeg;base64," + data.annotated;
         }
     });
 </script>
