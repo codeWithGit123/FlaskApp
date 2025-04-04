@@ -6,7 +6,7 @@
         {% for img in images %}
         <div class="col-md-4">
             <div class="card mb-4">
-                <img src="data:image/jpeg;base64,{{ img.image | b64encode | decode('utf-8') }}" class="card-img-top" alt="Detected Image">
+                <img src="data:image/jpeg;base64,{{ img.image }}" class="card-img-top" alt="Detected Image">
                 <div class="card-body">
                     <a href="/download/{{ img._id }}" class="btn btn-sm btn-outline-primary">Download</a>
                     <a href="/delete/{{ img._id }}" class="btn btn-sm btn-outline-danger">Delete</a>
