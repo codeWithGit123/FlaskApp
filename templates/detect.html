@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Image Detection</h2>
+<form method="POST" enctype="multipart/form-data">
+    <div class="mb-3">
+        <input type="file" name="image" class="form-control" accept="image/*" required>
+    </div>
+    <button type="submit" class="btn btn-success">Detect Weeds</button>
+</form>
+
+{% if image %}
+    <h4 class="mt-4">Original Image:</h4>
+    <img src="data:image/png;base64,{{ image | tojson | safe }}" class="img-fluid"/>
+{% endif %}
+
+{% if result %}
+    <h4 class="mt-4">Detection Result:</h4>
+    <img src="data:image/png;base64,{{ result | tojson | safe }}" class="img-fluid"/>
+{% endif %}
+
+{% if weeds %}
+    <h5 class="mt-4">Detected Weeds:</h5>
+    <ul>
+        {% for weed, conf in weeds %}
+            <li>{{ weed }} - {{ '%.2f'|format(conf) }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Detection History</h2>
+{% if images %}
+    <div class="row">
+        {% for img in images %}
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <img src="data:image/jpeg;base64,{{ img.image | b64encode | decode('utf-8') }}" class="card-img-top" alt="Detected Image">
+                <div class="card-body">
+                    <a href="/download/{{ img._id }}" class="btn btn-sm btn-outline-primary">Download</a>
+                    <a href="/delete/{{ img._id }}" class="btn btn-sm btn-outline-danger">Delete</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>No images found.</p>
+{% endif %}
+{% endblock %}

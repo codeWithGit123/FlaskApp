@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Live Camera Detection</h2>
+<video id="video" width="640" height="480" autoplay class="border mb-3"></video><br>
+<div class="mb-3">
+    <button onclick="startCamera()" class="btn btn-success">Start Camera</button>
+    <button onclick="stopCamera()" class="btn btn-danger">Stop Camera</button>
+    <button onclick="switchCamera()" class="btn btn-secondary">Switch Camera</button>
+</div>
+<div class="card p-3">
+    <h5>Detected Weeds:</h5>
+    <ul id="weedList"></ul>
+</div>
+<script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+<script>
+    const socket = io();
+    let stream = null;
+    let currentFacingMode = "user";
+
+    function startCamera() {
+        navigator.mediaDevices.getUserMedia({
+            video: { facingMode: currentFacingMode }
+        }).then(s => {
+            stream = s;
+            const video = document.getElementById('video');
+            video.srcObject = stream;
+            const track = stream.getVideoTracks()[0];
+            const imageCapture = new ImageCapture(track);
+            setInterval(() => {
+                imageCapture.grabFrame().then(bitmap => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = bitmap.width;
+                    canvas.height = bitmap.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(bitmap, 0, 0);
+                    const base64 = canvas.toDataURL('image/jpeg');
+                    socket.emit('video_feed', { frame: base64 });
+                });
+            }, 1500);
+        }).catch(err => {
+            console.error("Camera error:", err);
+        });
+    }
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            document.getElementById('video').srcObject = null;
+            stream = null;
+        }
+    }
+
+    function switchCamera() {
+        stopCamera();
+        currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+        startCamera();
+    }
+
+    socket.on('response', data => {
+        const weedList = document.getElementById("weedList");
+        weedList.innerHTML = "";
+        if (data.weeds && data.weeds.length) {
+            data.weeds.forEach(weed => {
+                const li = document.createElement('li');
+                li.innerText = weed;
+                weedList.appendChild(li);
+            });
+        } else {
+            const li = document.createElement('li');
+            li.innerText = "No weeds detected.";
+            weedList.appendChild(li);
+        }
+    });
+</script>
+{% endblock %}
