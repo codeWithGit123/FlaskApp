@@ -1,56 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flask SocketIO Camera</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+    <title>Camera Stream</title>
 </head>
 <body>
     <h1>Camera Feed</h1>
-    <video id="video" width="320" height="240" autoplay></video>
-    <button id="start" onclick="startCamera()">Start Camera</button>
+    <video id="video" width="640" height="480" autoplay></video><br>
 
+    <button onclick="startCamera()">Start Camera</button>
+    <button onclick="stopCamera()">Stop Camera</button>
+    <button onclick="switchCamera()">Switch to Rear Camera</button>
+
+    <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
     <script>
-        const socket = io.connect('http://' + document.domain + ':' + location.port);
+        const socket = io();
+        let stream = null;
+        let currentFacingMode = "user"; // 'user' for front, 'environment' for rear
 
-        // Initialize the camera when the "Start Camera" button is clicked
         function startCamera() {
-            const video = document.getElementById('video');
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: currentFacingMode }
+            }).then(s => {
+                stream = s;
+                document.getElementById('video').srcObject = stream;
 
-            // Request access to the camera
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then((stream) => {
-                    // Set the video stream as the source of the video element
-                    video.srcObject = stream;
-
-                    // Now we can send the video data to the server (every frame or in chunks)
-                    sendVideoFeed(stream);
-                })
-                .catch((err) => {
-                    console.log('Error accessing the camera: ', err);
-                });
+                // Send frames (example placeholder)
+                socket.emit('video_feed', { frame: 'video frame here' });
+            }).catch(err => {
+                console.error("Error starting camera:", err);
+            });
         }
 
-        // Send video feed data (you can use WebRTC or other methods to send frames)
-        function sendVideoFeed(stream) {
-            // Create a canvas to capture video frames
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            const video = document.getElementById('video');
-
-            setInterval(() => {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                // Send the image data to the server using SocketIO
-                const imageData = canvas.toDataURL('image/png');
-                socket.emit('video_feed', { image: imageData });
-            }, 100);  // Send every 100ms (10 FPS)
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                document.getElementById('video').srcObject = null;
+                stream = null;
+                console.log("Camera stopped");
+            }
         }
 
-        // Handle server response
-        socket.on('response', function(data) {
-            console.log(data.message);
+        function switchCamera() {
+            stopCamera();
+            currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+            startCamera();
+        }
+
+        socket.on('response', data => {
+            console.log("Server says:", data.message);
         });
     </script>
 </body>
