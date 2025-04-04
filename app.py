@@ -184,24 +184,37 @@ def handle_video_feed(data):
         if not frame_data:
             return
 
-        encoded_data = frame_data.split(',')[1]
+        # Decode the base64 frame sent from client
+        encoded_data = frame_data.split(',')[1]  # Remove the "data:image/jpeg;base64," part
         nparr = np.frombuffer(base64.b64decode(encoded_data), np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        # Convert from BGR to RGB
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
+        # Run detection using YOLO
         results = model(frame)
         weeds = []
+        annotated_frame = frame  # Default: original frame
 
         for result in results:
-            for box in result.boxes:
-                cls_id = int(box.cls[0])
-                conf = float(box.conf[0])
-                name = model.names[cls_id] if cls_id in model.names else f"class_{cls_id}"
-                weeds.append(f"{name} ({conf:.2f})")
+            if len(result.boxes) > 0:
+                # Get annotated image from the result (annotated with bounding boxes & probabilities)
+                annotated_frame = result.plot()
+                for box in result.boxes:
+                    cls_id = int(box.cls[0])
+                    conf = float(box.conf[0])
+                    name = model.names[cls_id] if cls_id in model.names else f"class_{cls_id}"
+                    weeds.append(f"{name} ({conf:.2f})")
 
-        emit('response', {'message': 'Frame processed', 'weeds': weeds})
+        # Convert the annotated frame to JPEG and then to a Base64 string
+        annotated_frame_bgr = cv2.cvtColor(annotated_frame, cv2.COLOR_RGB2BGR)
+        retval, buffer = cv2.imencode('.jpg', annotated_frame_bgr)
+        annotated_base64 = base64.b64encode(buffer).decode('utf-8')
+
+        emit('response', {'message': 'Frame processed', 'weeds': weeds, 'annotated': annotated_base64})
     except Exception as e:
         emit('response', {'message': 'Error processing frame', 'error': str(e)})
+
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=10000)
