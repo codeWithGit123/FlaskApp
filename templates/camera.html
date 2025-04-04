@@ -1,36 +1,32 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Live Camera Detection</h2>
-<video id="video" width="640" height="480" autoplay class="border mb-3"></video><br>
 <div class="mb-3">
     <button onclick="startCamera()" class="btn btn-success">Start Camera</button>
     <button onclick="stopCamera()" class="btn btn-danger">Stop Camera</button>
     <button onclick="switchCamera()" class="btn btn-secondary">Switch Camera</button>
 </div>
-<div class="card p-3 mb-3">
-    <h5>Detected Weeds:</h5>
-    <ul id="weedList"></ul>
-</div>
 <div class="card p-3">
-    <h5>Annotated Frame:</h5>
-    <img id="annotatedFrame" class="img-fluid" alt="Annotated Frame" src=""/>
+    <h5>Live Detection Feed:</h5>
+    <!-- This image element will display the annotated frame from the server -->
+    <img id="liveFeed" class="img-fluid border" alt="Live Detection Feed" src="">
 </div>
 <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
 <script>
     const socket = io();
     let stream = null;
     let currentFacingMode = "user";
+    let captureInterval;
 
     function startCamera() {
         navigator.mediaDevices.getUserMedia({
             video: { facingMode: currentFacingMode }
         }).then(s => {
             stream = s;
-            const video = document.getElementById('video');
-            video.srcObject = stream;
             const track = stream.getVideoTracks()[0];
             const imageCapture = new ImageCapture(track);
-            setInterval(() => {
+            // Capture a frame every 1500ms and send it to the server
+            captureInterval = setInterval(() => {
                 imageCapture.grabFrame().then(bitmap => {
                     const canvas = document.createElement('canvas');
                     canvas.width = bitmap.width;
@@ -42,7 +38,7 @@
                 }).catch(err => {
                     console.error('Error grabbing frame:', err);
                 });
-            }, 1500); // Adjust interval as needed
+            }, 1500);
         }).catch(err => {
             console.error("Camera error:", err);
         });
@@ -51,8 +47,10 @@
     function stopCamera() {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
-            document.getElementById('video').srcObject = null;
             stream = null;
+        }
+        if (captureInterval) {
+            clearInterval(captureInterval);
         }
     }
 
@@ -62,24 +60,10 @@
         startCamera();
     }
 
+    // When the server returns the annotated frame, update the live feed image
     socket.on('response', data => {
-        const weedList = document.getElementById("weedList");
-        weedList.innerHTML = "";
-        if (data.weeds && data.weeds.length) {
-            data.weeds.forEach(weed => {
-                const li = document.createElement('li');
-                li.innerText = weed;
-                weedList.appendChild(li);
-            });
-        } else {
-            const li = document.createElement('li');
-            li.innerText = "No weeds detected.";
-            weedList.appendChild(li);
-        }
-        // Update the annotated frame image
         if (data.annotated) {
-            const annotatedImg = document.getElementById("annotatedFrame");
-            annotatedImg.src = "data:image/jpeg;base64," + data.annotated;
+            document.getElementById("liveFeed").src = "data:image/jpeg;base64," + data.annotated;
         }
     });
 </script>
