@@ -147,7 +147,11 @@ def history():
     if 'user' not in session:
         return redirect(url_for('login'))
 
-    images = get_user_images(session['user']['_id'])
+    images = []
+    for img in get_user_images(session['user']['_id']):
+        img['image'] = base64.b64encode(img['image']).decode('utf-8')  # Convert to Base64 String
+        images.append(img)
+
     return render_template('history.html', images=images)
 
 @app.route('/delete/<image_id>')
