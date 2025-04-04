@@ -59,6 +59,13 @@ def preprocess_image(image):
     augmented = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
     return augmented
 
+def encode_image(image):
+    """ Convert a PIL image to a Base64-encoded string """
+    img_bytes = io.BytesIO()
+    image.save(img_bytes, format="PNG")
+    return base64.b64encode(img_bytes.getvalue()).decode("utf-8")
+
+
 def detect_weeds(image):
     results = model(image)
     detected = False
