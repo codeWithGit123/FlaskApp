@@ -127,20 +127,19 @@ def detect():
         file = request.files['image']
         if file:
             image = Image.open(file.stream).convert('RGB')
-            image_data = image
+            image_data = encode_image(image)  # Convert uploaded image to Base64
             preprocessed = preprocess_image(image)
             detected, result_array, weeds_info = detect_weeds(preprocessed)
 
             if detected:
-                result_pil = Image.fromarray(result_array)
-                img_bytes = io.BytesIO()
-                result_pil.save(img_bytes, format='JPEG')
-                save_image(session['user']['_id'], img_bytes.getvalue())
-                result_image = result_array
+                result_image = encode_image(Image.fromarray(result_array))  # Convert result image to Base64
+                save_image(session['user']['_id'], base64.b64decode(result_image))  # Save as bytes in DB
                 flash("Weed detected and image saved!", "success")
             else:
                 flash("No weeds detected.", "info")
+
     return render_template('detect.html', image=image_data, result=result_image, weeds=weeds_info)
+
 
 @app.route('/history')
 def history():
