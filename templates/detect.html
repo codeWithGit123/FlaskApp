@@ -15,7 +15,7 @@
 
 {% if result %}
     <h4 class="mt-4">Detection Result:</h4>
-    <img src="data:image/png;base64,{{ result | tojson | safe }}" class="img-fluid"/>
+    <img src="data:image/png;base64,{{ result }}" class="img-fluid"/>
 {% endif %}
 
 {% if weeds %}
